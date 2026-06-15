@@ -14,9 +14,12 @@ if (!command) {
 const homeDir = resolve(process.cwd(), ".next-build-home");
 const appDataDir = join(homeDir, "AppData", "Roaming");
 const localAppDataDir = join(homeDir, "AppData", "Local");
+const isWindows = process.platform === "win32";
 
-mkdirSync(appDataDir, { recursive: true });
-mkdirSync(localAppDataDir, { recursive: true });
+if (isWindows) {
+  mkdirSync(appDataDir, { recursive: true });
+  mkdirSync(localAppDataDir, { recursive: true });
+}
 
 const isCloudflareBuild = process.env.NEXT_DEPLOY_TARGET === "cloudflare" || process.env.CF_PAGES === "1";
 const isOpenNextInnerBuild = process.env.NINEROUTER_OPENNEXT_BUILD === "1";
@@ -33,7 +36,7 @@ function runCommand(cmd, cmdArgs, cmdEnv = process.env) {
     const child = spawn(cmd, cmdArgs, {
       env: cmdEnv,
       stdio: "inherit",
-      shell: process.platform === "win32",
+      shell: isWindows,
     });
     child.on("exit", (code, signal) => {
       if (signal) reject(new Error(`Command terminated by ${signal}`));
@@ -85,10 +88,14 @@ if (isCloudflareBuild || isOpenNextInnerBuild) {
 const env = {
   ...process.env,
   NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || "1",
-  HOME: process.env.HOME || homeDir,
-  USERPROFILE: homeDir,
-  APPDATA: appDataDir,
-  LOCALAPPDATA: localAppDataDir,
+  ...(isWindows
+    ? {
+        HOME: process.env.HOME || homeDir,
+        USERPROFILE: homeDir,
+        APPDATA: appDataDir,
+        LOCALAPPDATA: localAppDataDir,
+      }
+    : {}),
 };
 
 try {

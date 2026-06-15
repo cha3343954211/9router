@@ -12,9 +12,12 @@ if (!command) {
 const homeDir = resolve(process.cwd(), ".cloudflare-home");
 const appDataDir = join(homeDir, "AppData", "Roaming");
 const localAppDataDir = join(homeDir, "AppData", "Local");
+const isWindows = process.platform === "win32";
 
-mkdirSync(appDataDir, { recursive: true });
-mkdirSync(localAppDataDir, { recursive: true });
+if (isWindows) {
+  mkdirSync(appDataDir, { recursive: true });
+  mkdirSync(localAppDataDir, { recursive: true });
+}
 
 for (const dir of [".next", ".open-next"]) {
   const target = resolve(process.cwd(), dir);
@@ -58,10 +61,14 @@ const env = {
   NINEROUTER_OPENNEXT_BUILD: "1",
   NEXT_DEPLOY_TARGET: "cloudflare",
   NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || "1",
-  HOME: homeDir,
-  USERPROFILE: homeDir,
-  APPDATA: appDataDir,
-  LOCALAPPDATA: localAppDataDir,
+  ...(isWindows
+    ? {
+        HOME: homeDir,
+        USERPROFILE: homeDir,
+        APPDATA: appDataDir,
+        LOCALAPPDATA: localAppDataDir,
+      }
+    : {}),
 };
 
 let child;
@@ -69,7 +76,7 @@ try {
   child = spawn(command, args, {
     env,
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: isWindows,
   });
 } catch (error) {
   restoreSourceFiles();
