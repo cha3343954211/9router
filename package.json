@@ -3,9 +3,15 @@
   "version": "0.4.80",
   "description": "9Router web dashboard",
   "private": true,
+  "packageManager": "npm@11.6.2",
   "scripts": {
     "dev": "next dev --webpack --port 20128",
-    "build": "next build --webpack",
+    "build": "node scripts/next-build-env.mjs next build --webpack",
+    "build:cloudflare": "node scripts/cloudflare-env.mjs opennextjs-cloudflare build",
+    "preview:cloudflare": "node scripts/cloudflare-env.mjs opennextjs-cloudflare build && wrangler dev",
+    "deploy:cloudflare": "node scripts/cloudflare-env.mjs opennextjs-cloudflare build && wrangler deploy",
+    "preview": "npm run preview:cloudflare",
+    "deploy": "npm run deploy:cloudflare",
     "start": "next start",
     "dev:bun": "bun --bun next dev --webpack --port 20128",
     "build:bun": "bun --bun next build --webpack",
@@ -50,10 +56,12 @@
   },
   "comment_better_sqlite3": "kept in optionalDependencies so npm install doesn't fail on systems without build tools — sql.js is used as fallback at runtime",
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.19.11",
     "@tailwindcss/postcss": "^4.1.18",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "wrangler": "^4.100.0"
   }
 }

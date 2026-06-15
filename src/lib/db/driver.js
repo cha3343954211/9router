@@ -4,7 +4,23 @@ import { ensureDirs, DATA_FILE } from "./paths.js";
 if (!global._dbAdapter) global._dbAdapter = { instance: null, initPromise: null, logged: false };
 const state = global._dbAdapter;
 
+function isCloudflareBuild() {
+  return process.env.NEXT_DEPLOY_TARGET === "cloudflare" || process.env.CF_PAGES === "1";
+}
+
+async function tryD1() {
+  if (!isCloudflareBuild()) return null;
+  try {
+    const { createD1Adapter } = await import("./adapters/d1Adapter.js");
+    return await createD1Adapter();
+  } catch (e) {
+    console.warn(`[DB] Cloudflare D1 unavailable: ${e.message}`);
+    return null;
+  }
+}
+
 async function tryBunSqlite() {
+  if (isCloudflareBuild()) return null;
   // Bun runtime only — built-in, no install needed
   if (!process.versions.bun) return null;
   try {
@@ -17,6 +33,7 @@ async function tryBunSqlite() {
 }
 
 async function tryBetterSqlite() {
+  if (isCloudflareBuild()) return null;
   // Skip on Bun — better-sqlite3 native bindings unsupported
   if (process.versions.bun) return null;
   try {
@@ -29,6 +46,7 @@ async function tryBetterSqlite() {
 }
 
 async function tryNodeSqlite() {
+  if (isCloudflareBuild()) return null;
   // Built-in since Node 22.5.0 — no install needed. Skip under Bun (no node:sqlite).
   if (process.versions.bun) return null;
   const [maj, min] = process.versions.node.split(".").map(Number);
@@ -57,14 +75,16 @@ async function initAdapter() {
   // Order per runtime:
   //   Bun:  bun:sqlite → sql.js
   //   Node: better-sqlite3 → node:sqlite (≥22.5) → sql.js
-  let adapter = await tryBunSqlite();
+  let adapter = await tryD1();
+  if (!adapter) adapter = await tryBunSqlite();
   if (!adapter) adapter = await tryBetterSqlite();
   if (!adapter) adapter = await tryNodeSqlite();
   if (!adapter) adapter = await trySqlJs();
   if (!adapter) throw new Error("[DB] No SQLite driver available (bun/better/node/sql.js all failed)");
 
   if (!state.logged) {
-    console.log(`[DB] Driver: ${adapter.driver} | file: ${DATA_FILE}`);
+    const location = adapter.driver === "cloudflare-d1" ? "binding: NINEROUTER_DB" : `file: ${DATA_FILE}`;
+    console.log(`[DB] Driver: ${adapter.driver} | ${location}`);
     state.logged = true;
   }
 

@@ -1,0 +1,9 @@
+import { proxy as dashboardProxy } from "./dashboardGuard.cloudflare";
+
+export default async function middleware(request) {
+  return dashboardProxy(request);
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],
+};

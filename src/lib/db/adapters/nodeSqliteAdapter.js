@@ -50,23 +50,23 @@ export async function createNodeSqliteAdapter(filePath) {
 
   return {
     driver: "node:sqlite",
-    run(sql, params = []) {
+    async run(sql, params = []) {
       const r = prepare(sql).run(...params);
       return { changes: Number(r.changes ?? 0), lastInsertRowid: Number(r.lastInsertRowid ?? 0) };
     },
-    get(sql, params = []) {
+    async get(sql, params = []) {
       return prepare(sql).get(...params);
     },
-    all(sql, params = []) {
+    async all(sql, params = []) {
       return prepare(sql).all(...params);
     },
-    exec(sql) { return db.exec(sql); },
-    transaction(fn) {
+    async exec(sql) { return db.exec(sql); },
+    async transaction(fn) {
       // node:sqlite has no transaction wrapper. Use SAVEPOINT for nested support.
       const sp = `sp_${Math.random().toString(36).slice(2)}`;
       db.exec(`SAVEPOINT ${sp}`);
       try {
-        const r = fn();
+        const r = await fn();
         db.exec(`RELEASE ${sp}`);
         return r;
       } catch (e) {

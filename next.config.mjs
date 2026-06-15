@@ -1,7 +1,8 @@
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const projectRoot = dirname(fileURLToPath(import.meta.url));
+const isCloudflareBuild = process.env.NEXT_DEPLOY_TARGET === "cloudflare" || process.env.CF_PAGES === "1";
 // CLI bundling needs workspace root so tracing includes hoisted node_modules (slim ~50MB).
 // Docker / default uses projectRoot so server.js lands at /app/server.js (not nested).
 const tracingRoot = process.env.NEXT_TRACING_ROOT_MODE === "workspace"
@@ -12,7 +13,7 @@ const proxyClientMaxBodySize = process.env.NINEROUTER_PROXY_CLIENT_MAX_BODY_SIZE
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
-  output: "standalone",
+  ...(isCloudflareBuild ? {} : { output: "standalone" }),
   serverExternalPackages: ["better-sqlite3", "sql.js", "node:sqlite", "bun:sqlite"],
   turbopack: {
     root: tracingRoot
@@ -30,6 +31,17 @@ const nextConfig = {
     proxyClientMaxBodySize,
   },
   webpack: (config, { isServer }) => {
+    if (isCloudflareBuild) {
+      const unavailableDbAdapter = resolve(projectRoot, "src/lib/db/adapters/unavailableAdapter.js");
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        [resolve(projectRoot, "src/dashboardGuard.js")]: resolve(projectRoot, "src/dashboardGuard.cloudflare.js"),
+        [resolve(projectRoot, "src/lib/db/adapters/bunSqliteAdapter.js")]: unavailableDbAdapter,
+        [resolve(projectRoot, "src/lib/db/adapters/betterSqliteAdapter.js")]: unavailableDbAdapter,
+        [resolve(projectRoot, "src/lib/db/adapters/nodeSqliteAdapter.js")]: unavailableDbAdapter,
+      };
+    }
+
     // Ignore fs/path modules in browser bundle
     if (!isServer) {
       config.resolve.fallback = {

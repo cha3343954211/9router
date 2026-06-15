@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "9router",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-06-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "NEXT_DEPLOY_TARGET": "cloudflare",
+    "NEXT_PUBLIC_CLOUD_URL": ""
+  }
+
+  // Optional durable storage. Create a D1 database, then uncomment and replace
+  // database_id. The app will automatically use this binding when present.
+  // "d1_databases": [
+  //   {
+  //     "binding": "NINEROUTER_DB",
+  //     "database_name": "9router",
+  //     "database_id": "replace-with-your-d1-database-id"
+  //   }
+  // ]
+}
