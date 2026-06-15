@@ -19,6 +19,11 @@ async function tryD1() {
   }
 }
 
+async function createCloudflareNoD1Adapter() {
+  const { createCloudflareUnavailableAdapter } = await import("./adapters/unavailableAdapter.js");
+  return createCloudflareUnavailableAdapter();
+}
+
 async function tryBunSqlite() {
   if (isCloudflareBuild()) return null;
   // Bun runtime only — built-in, no install needed
@@ -71,11 +76,12 @@ async function trySqlJs() {
 }
 
 async function initAdapter() {
-  ensureDirs();
+  if (!isCloudflareBuild()) ensureDirs();
   // Order per runtime:
   //   Bun:  bun:sqlite → sql.js
   //   Node: better-sqlite3 → node:sqlite (≥22.5) → sql.js
   let adapter = await tryD1();
+  if (!adapter && isCloudflareBuild()) adapter = await createCloudflareNoD1Adapter();
   if (!adapter) adapter = await tryBunSqlite();
   if (!adapter) adapter = await tryBetterSqlite();
   if (!adapter) adapter = await tryNodeSqlite();
@@ -83,10 +89,16 @@ async function initAdapter() {
   if (!adapter) throw new Error("[DB] No SQLite driver available (bun/better/node/sql.js all failed)");
 
   if (!state.logged) {
-    const location = adapter.driver === "cloudflare-d1" ? "binding: NINEROUTER_DB" : `file: ${DATA_FILE}`;
+    const location = adapter.driver === "cloudflare-d1"
+      ? "binding: NINEROUTER_DB"
+      : adapter.driver === "cloudflare-no-d1"
+        ? "missing binding: NINEROUTER_DB"
+        : `file: ${DATA_FILE}`;
     console.log(`[DB] Driver: ${adapter.driver} | ${location}`);
     state.logged = true;
   }
+
+  if (adapter.driver === "cloudflare-no-d1") return adapter;
 
   const { runMigrationOnce } = await import("./migrate.js");
   await runMigrationOnce(adapter);
