@@ -55,6 +55,7 @@ ownsMiddlewareSwap = prepareCloudflareMiddleware();
 
 const env = {
   ...process.env,
+  NINEROUTER_OPENNEXT_BUILD: "1",
   NEXT_DEPLOY_TARGET: "cloudflare",
   NEXT_TELEMETRY_DISABLED: process.env.NEXT_TELEMETRY_DISABLED || "1",
   HOME: homeDir,

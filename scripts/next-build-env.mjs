@@ -17,6 +17,7 @@ mkdirSync(appDataDir, { recursive: true });
 mkdirSync(localAppDataDir, { recursive: true });
 
 const isCloudflareBuild = process.env.NEXT_DEPLOY_TARGET === "cloudflare" || process.env.CF_PAGES === "1";
+const isOpenNextInnerBuild = process.env.NINEROUTER_OPENNEXT_BUILD === "1";
 const srcDir = resolve(process.cwd(), "src");
 const proxyFile = join(srcDir, "proxy.js");
 const disabledProxyFile = join(srcDir, "proxy.js.cloudflare-disabled");
@@ -24,6 +25,21 @@ const middlewareFile = join(srcDir, "middleware.js");
 const cloudflareMiddlewareFile = join(srcDir, "middleware.cloudflare.js");
 let restored = false;
 let ownsMiddlewareSwap = false;
+
+function runCommand(cmd, cmdArgs, cmdEnv = process.env) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, cmdArgs, {
+      env: cmdEnv,
+      stdio: "inherit",
+      shell: process.platform === "win32",
+    });
+    child.on("exit", (code, signal) => {
+      if (signal) reject(new Error(`Command terminated by ${signal}`));
+      else resolve(code ?? 0);
+    });
+    child.on("error", reject);
+  });
+}
 
 function prepareCloudflareMiddleware() {
   const alreadyPrepared = existsSync(middlewareFile) && existsSync(disabledProxyFile) && !existsSync(proxyFile);
@@ -48,6 +64,15 @@ function restoreSourceFiles() {
 }
 
 if (isCloudflareBuild) {
+  if (!isOpenNextInnerBuild) {
+    try {
+      process.exit(await runCommand("node", ["scripts/cloudflare-env.mjs", "opennextjs-cloudflare", "build"]));
+    } catch (error) {
+      console.error(error.message);
+      process.exit(1);
+    }
+  }
+
   for (const dir of [".next"]) {
     const target = resolve(process.cwd(), dir);
     try { if (existsSync(target)) rmSync(target, { recursive: true, force: true }); } catch {}
@@ -64,26 +89,15 @@ const env = {
   LOCALAPPDATA: localAppDataDir,
 };
 
-const child = spawn(command, args, {
-  env,
-  stdio: "inherit",
-  shell: process.platform === "win32",
-});
-
-child.on("exit", (code, signal) => {
+try {
+  const code = await runCommand(command, args, env);
   restoreSourceFiles();
-  if (signal) {
-    console.error(`Command terminated by ${signal}`);
-    process.exit(1);
-  }
-  process.exit(code ?? 0);
-});
-
-child.on("error", (error) => {
+  process.exit(code);
+} catch (error) {
   restoreSourceFiles();
   console.error(error.message);
   process.exit(1);
-});
+}
 
 process.on("SIGINT", () => {
   restoreSourceFiles();
