@@ -68,7 +68,7 @@ export async function updatePricing(pricingData) {
         merged[model] = pricing;
       }
       await db.run(
-        `INSERT INTO kv(scope, key, value) VALUES('pricing', ?, ?) ON CONFLICT(scope, key) DO UPDATE SET value = excluded.value`,
+        `INSERT OR REPLACE INTO kv(scope, key, value) VALUES('pricing', ?, ?)`,
         [provider, stringifyJson(merged)]
       );
     }
@@ -92,7 +92,7 @@ export async function resetPricing(provider, model) {
       await db.run(`DELETE FROM kv WHERE scope = 'pricing' AND key = ?`, [provider]);
     } else {
       await db.run(
-        `INSERT INTO kv(scope, key, value) VALUES('pricing', ?, ?) ON CONFLICT(scope, key) DO UPDATE SET value = excluded.value`,
+        `INSERT OR REPLACE INTO kv(scope, key, value) VALUES('pricing', ?, ?)`,
         [provider, stringifyJson(current)]
       );
     }

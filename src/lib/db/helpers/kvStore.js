@@ -17,13 +17,13 @@ export function makeKv(scope) {
     },
     async set(key, value) {
       const db = await getAdapter();
-      await db.run(`INSERT INTO kv(scope, key, value) VALUES(?, ?, ?) ON CONFLICT(scope, key) DO UPDATE SET value = excluded.value`, [scope, key, stringifyJson(value)]);
+      await db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES(?, ?, ?)`, [scope, key, stringifyJson(value)]);
     },
     async setMany(obj) {
       const db = await getAdapter();
       await db.transaction(async () => {
         for (const [k, v] of Object.entries(obj)) {
-          await db.run(`INSERT INTO kv(scope, key, value) VALUES(?, ?, ?) ON CONFLICT(scope, key) DO UPDATE SET value = excluded.value`, [scope, k, stringifyJson(v)]);
+          await db.run(`INSERT OR REPLACE INTO kv(scope, key, value) VALUES(?, ?, ?)`, [scope, k, stringifyJson(v)]);
         }
       });
     },

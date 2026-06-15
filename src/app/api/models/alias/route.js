@@ -29,7 +29,7 @@ export async function PUT(request) {
     return NextResponse.json({ success: true, model, alias });
   } catch (error) {
     console.log("Error updating alias:", error);
-    return NextResponse.json({ error: "Failed to update alias" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update alias", detail: error.message }, { status: 500 });
   }
 }
 
@@ -48,6 +48,6 @@ export async function DELETE(request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.log("Error deleting alias:", error);
-    return NextResponse.json({ error: "Failed to delete alias" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete alias", detail: error.message }, { status: 500 });
   }
 }

@@ -26,7 +26,7 @@ export async function disableModels(providerAlias, ids) {
     const current = row ? (parseJson(row.value, []) || []) : [];
     const merged = [...new Set([...current, ...ids])];
     await db.run(
-      `INSERT INTO kv(scope, key, value) VALUES(?, ?, ?) ON CONFLICT(scope, key) DO UPDATE SET value = excluded.value`,
+      `INSERT OR REPLACE INTO kv(scope, key, value) VALUES(?, ?, ?)`,
       [SCOPE, providerAlias, stringifyJson(merged)]
     );
   });
@@ -48,7 +48,7 @@ export async function enableModels(providerAlias, ids) {
       await db.run(`DELETE FROM kv WHERE scope = ? AND key = ?`, [SCOPE, providerAlias]);
     } else {
       await db.run(
-        `INSERT INTO kv(scope, key, value) VALUES(?, ?, ?) ON CONFLICT(scope, key) DO UPDATE SET value = excluded.value`,
+        `INSERT OR REPLACE INTO kv(scope, key, value) VALUES(?, ?, ?)`,
         [SCOPE, providerAlias, stringifyJson(next)]
       );
     }
