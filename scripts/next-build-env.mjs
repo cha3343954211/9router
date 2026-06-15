@@ -2,7 +2,9 @@ import { copyFileSync, existsSync, mkdirSync, renameSync, rmSync } from "node:fs
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 
-const [, , command, ...args] = process.argv;
+const [, , command, ...rawArgs] = process.argv;
+const forceNextBuildOnly = rawArgs.includes("--ninerouter-next-only");
+const args = rawArgs.filter((arg) => arg !== "--ninerouter-next-only");
 
 if (!command) {
   console.error("Usage: node scripts/next-build-env.mjs <command> [...args]");
@@ -63,16 +65,16 @@ function restoreSourceFiles() {
   try { if (existsSync(disabledProxyFile)) renameSync(disabledProxyFile, proxyFile); } catch {}
 }
 
-if (isCloudflareBuild) {
-  if (!isOpenNextInnerBuild) {
+if (!isOpenNextInnerBuild && !forceNextBuildOnly) {
     try {
       process.exit(await runCommand("node", ["scripts/cloudflare-env.mjs", "opennextjs-cloudflare", "build"]));
     } catch (error) {
       console.error(error.message);
       process.exit(1);
     }
-  }
+}
 
+if (isCloudflareBuild || isOpenNextInnerBuild) {
   for (const dir of [".next"]) {
     const target = resolve(process.cwd(), dir);
     try { if (existsSync(target)) rmSync(target, { recursive: true, force: true }); } catch {}

@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "next dev --webpack --port 20128",
     "build": "node scripts/next-build-env.mjs next build --webpack",
+    "build:next": "node scripts/next-build-env.mjs next build --webpack --ninerouter-next-only",
     "build:cloudflare": "node scripts/cloudflare-env.mjs opennextjs-cloudflare build",
     "preview:cloudflare": "node scripts/cloudflare-env.mjs opennextjs-cloudflare build && wrangler dev",
     "deploy:cloudflare": "node scripts/cloudflare-env.mjs opennextjs-cloudflare build && wrangler deploy",
