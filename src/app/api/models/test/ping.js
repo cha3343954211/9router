@@ -50,7 +50,39 @@ async function getInternalHeaders() {
   return headers;
 }
 
+async function pingOpenCodeFreeModel(model) {
+  const slash = model.indexOf("/");
+  const modelId = slash >= 0 ? model.slice(slash + 1) : model;
+  const start = Date.now();
+  const res = await fetch("https://opencode.ai/zen/v1/models", {
+    headers: {
+      "Accept": "application/json",
+      "x-opencode-client": "desktop",
+    },
+    signal: AbortSignal.timeout(15000),
+  });
+  const latencyMs = Date.now() - start;
+  const rawText = await res.text().catch(() => "");
+  let parsed = null;
+  try { parsed = rawText ? JSON.parse(rawText) : null; } catch {}
+
+  if (!res.ok) {
+    const detail = parsed?.error?.message || parsed?.message || parsed?.error || rawText;
+    return { ok: false, latencyMs, error: `HTTP ${res.status}${detail ? `: ${String(detail).slice(0, 240)}` : ""}`, status: res.status };
+  }
+
+  const models = Array.isArray(parsed?.data) ? parsed.data : [];
+  const exists = models.some((entry) => entry?.id === modelId);
+  return exists
+    ? { ok: true, latencyMs, error: null, status: res.status }
+    : { ok: false, latencyMs, error: `Model not listed by OpenCode: ${modelId}`, status: 404 };
+}
+
 export async function pingModelByKind(model, kind, baseUrl = `http://127.0.0.1:${process.env.PORT || UPDATER_CONFIG.appPort}`) {
+  if (model === "opencode" || model.startsWith("opencode/") || model.startsWith("oc/")) {
+    return await pingOpenCodeFreeModel(model);
+  }
+
   const headers = await getInternalHeaders();
   const start = Date.now();
 
