@@ -147,7 +147,12 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: fullModel, alias }),
       });
-      if (res.ok) await fetchData();
+      if (res.ok) {
+        await fetchData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.detail || data.error || "Failed to set alias");
+      }
     } catch (e) { console.log("set alias error:", e); }
   };
 
@@ -168,6 +173,9 @@ export default function ModelsCard({ providerId, kindFilter, providerAliasOverri
       if (res.ok) {
         await fetchData();
         window.dispatchEvent(new CustomEvent("customModelChanged"));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.detail || data.error || "Failed to add custom model");
       }
     } catch (e) { console.log("add custom model error:", e); }
   };

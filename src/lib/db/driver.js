@@ -24,6 +24,27 @@ async function createCloudflareNoD1Adapter() {
   return createCloudflareUnavailableAdapter();
 }
 
+async function ensureCloudflareD1Schema(adapter) {
+  const { TABLES, buildCreateTableSql, SCHEMA_VERSION } = await import("./schema.js");
+
+  for (const [tableName, def] of Object.entries(TABLES)) {
+    await adapter.exec(buildCreateTableSql(tableName, def));
+
+    const existing = await adapter.all(`PRAGMA table_info(${tableName})`);
+    const existingNames = new Set(existing.map((row) => row.name));
+    for (const [colName, colDef] of Object.entries(def.columns)) {
+      if (!existingNames.has(colName)) {
+        await adapter.exec(`ALTER TABLE ${tableName} ADD COLUMN ${colName} ${colDef}`);
+      }
+    }
+
+    for (const indexSql of def.indexes || []) await adapter.exec(indexSql);
+  }
+
+  await adapter.run(`INSERT OR REPLACE INTO _meta(key, value) VALUES(?, ?)`, ["schemaVersion", String(SCHEMA_VERSION)]);
+  await adapter.run(`INSERT OR REPLACE INTO _meta(key, value) VALUES(?, ?)`, ["appVersion", "cloudflare"]);
+}
+
 async function tryBunSqlite() {
   if (isCloudflareBuild()) return null;
   // Bun runtime only — built-in, no install needed
@@ -99,6 +120,10 @@ async function initAdapter() {
   }
 
   if (adapter.driver === "cloudflare-no-d1") return adapter;
+  if (adapter.driver === "cloudflare-d1") {
+    await ensureCloudflareD1Schema(adapter);
+    return adapter;
+  }
 
   const { runMigrationOnce } = await import("./migrate.js");
   await runMigrationOnce(adapter);

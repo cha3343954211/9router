@@ -25,7 +25,7 @@ export async function POST(request) {
     return NextResponse.json({ success: true, added });
   } catch (error) {
     console.log("Error adding custom model:", error);
-    return NextResponse.json({ error: "Failed to add custom model" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to add custom model", detail: error.message }, { status: 500 });
   }
 }
 
@@ -43,6 +43,6 @@ export async function DELETE(request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.log("Error deleting custom model:", error);
-    return NextResponse.json({ error: "Failed to delete custom model" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete custom model", detail: error.message }, { status: 500 });
   }
 }
